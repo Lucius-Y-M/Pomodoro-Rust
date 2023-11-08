@@ -1,8 +1,14 @@
-
 use eframe::egui::{self, Ui};
 use chrono::Duration;
 #[allow(unused_imports)]
 use chrono::serde::ts_seconds;
+
+
+
+const BTN_CONFIRM_STR : &str = "Confirm";
+const BTN_RECHOOSE_STR : &str = "Re-Choose";
+
+const BTN_STATUSES : [&str; 2] = [BTN_CONFIRM_STR, BTN_RECHOOSE_STR];
 
 
 #[derive(serde::Deserialize, serde::Serialize)]
@@ -14,8 +20,8 @@ pub struct Pomodoro {
     value: f32,
 
     // #[serde(skip)]
-    time_settings: TimeSettings,
-    music_settings: IntercessionMusic,
+    time_sett: TimeSettings,
+    music_sett: IntercessionMusic,
 }
 
 
@@ -25,9 +31,16 @@ struct TimeSettings {
     // #[serde(with = "ts_seconds")]
     #[serde(skip)]
     study_len: DurationWrapper,
+    study_len_slider_enable: bool,
+    #[serde(skip)]
+    study_len_btn_stat: &'static str,
+
     // #[serde(with = "ts_seconds")]
     #[serde(skip)]
     relax_len: DurationWrapper,
+    relax_len_slider_enable: bool,
+    #[serde(skip)]
+    relax_len_btn_stat: &'static str,
 
     enable_cycles: bool,
     cycle_times: i32,
@@ -35,12 +48,16 @@ struct TimeSettings {
 }
 
 struct DurationWrapper {
+    mins: i64,
     dur: Duration,
 }
 
 impl Default for DurationWrapper {
     fn default() -> Self {
-        Self { dur: Duration::minutes(40) }
+        Self {
+            mins: 0,
+            dur: Duration::minutes(0)
+        }
     }
 }
 
@@ -48,23 +65,37 @@ impl Default for DurationWrapper {
 impl Default for TimeSettings {
     fn default() -> Self {
         Self {
-            study_len: DurationWrapper { dur: Duration::minutes(50) },
-            relax_len: DurationWrapper { dur: Duration::minutes(10) },
+            study_len: DurationWrapper {
+                mins: 50,
+                dur: Duration::minutes(50)
+            },
+            study_len_slider_enable: true,
+            study_len_btn_stat: BTN_STATUSES[0],
+
+
+            relax_len: DurationWrapper {
+                mins: 10,
+                dur: Duration::minutes(10)
+            },
+            relax_len_slider_enable: true,
+            relax_len_btn_stat: BTN_STATUSES[0],
+
             enable_cycles: false,
             cycle_times: 3,
-            cycle_count: 0
+            cycle_count: 0,
+
         }
     }
 }
 
 
 
-#[derive(serde::Deserialize, serde::Serialize)]
+#[derive(serde::Deserialize, serde::Serialize, Default)]
 struct IntercessionMusic {
     play_relax_start: bool,
-    file_path_relax_start: String,
+    file_path_rlx: String,
     play_study_start: bool,
-    file_path_study_start: String,
+    file_path_std: String,
 }
 
 
@@ -77,8 +108,8 @@ impl Default for Pomodoro {
         Self {
             label: "My App".to_owned(),
             value: 1.1,
-            time_settings: todo!(),
-            music_settings: todo!(),            
+            time_sett: TimeSettings::default(),
+            music_sett: IntercessionMusic::default()
         }
     }
 }
@@ -92,6 +123,9 @@ impl Pomodoro {
         }
     }
 }
+
+
+
 
 impl eframe::App for Pomodoro {
     fn update(&mut self, ctx: &eframe::egui::Context, frame: &mut eframe::Frame) {
@@ -108,9 +142,11 @@ impl eframe::App for Pomodoro {
                     }
                 });
                 ui.add_space(16.0);
+                egui::widgets::global_dark_light_mode_switch(ui);
+
             });
 
-            egui::widgets::global_dark_light_mode_switch(ui);
+
         });
 
                
@@ -155,33 +191,92 @@ impl eframe::App for Pomodoro {
 
             // Study Time
             ui.horizontal(|ui| {
-                ui.label("Juche");
-                let sl1 = ui.add(
+                ui.label("Study Time Setting");
+                
+                let slider =
                     egui::Slider::new(
-                        &mut self.time_settings.study_len.dur.num_minutes(),
+                        &mut self.time_sett.study_len.mins,
                         0..=120
                     )
                     .text("Minutes")
-                    .text_color(egui::Color32::from_rgb(150, 150, 50))
-                );
+                    .text_color(egui::Color32::from_rgb(150, 150, 50));
 
-                if ui.button("Reset").clicked() {
+                ui.add_enabled(self.time_sett.study_len_slider_enable, slider);
+
+                let btn_lock_unlock = egui::Button::new(self.time_sett.study_len_btn_stat)
+                    .fill(egui::Color32::from_rgb(3,3,3))
+                    .rounding(25.0);
+                let btn_reset = egui::Button::new("RESET")
+                    .fill(egui::Color32::from_rgb(200, 0, 0))
+                    .rounding(25.0);
+
+                if ui.add(btn_lock_unlock).clicked() {
+                    let enable = &mut self.time_sett.study_len_slider_enable;
+                    if *enable {
+                        *enable = false;
+
+                        self.time_sett.study_len_btn_stat = BTN_STATUSES[1];
+                        
+                        self.time_sett.study_len.dur = Duration::minutes(self.time_sett.study_len.mins);
+                        println!(">> Debug: study time Duration len now = {x:?}", x=self.time_sett.study_len.dur);
+                    } else {
+                        *enable = true;
+                        self.time_sett.study_len_btn_stat = BTN_STATUSES[0];
+
+                    }
                 }
+
+                if ui.add(btn_reset).clicked() {
+                    self.time_sett.study_len.mins = 0;
+                    self.time_sett.study_len.dur = Duration::minutes(0);
+                }
+
             });
 
             // Relax Time
             ui.horizontal(|ui| {
+                ui.label("Relax Time Setting");
                 
-                let sl1 = ui.add(
+                
+                let slider =
                     egui::Slider::new(
-                        &mut self.time_settings.study_len.dur.num_minutes(),
+                        &mut self.time_sett.relax_len.mins,
                         0..=60
                     )
                     .text("Minutes")
-                    .text_color(egui::Color32::from_rgb(150, 150, 50))
-                );
+                    .text_color(egui::Color32::from_rgb(150, 150, 50));
+
+                ui.add_enabled(self.time_sett.relax_len_slider_enable, slider);
                 
-                if ui.button("Reset").clicked() {
+
+                // // >>> two buttons:
+                // // 1. lock / unlock slider
+                let btn_lock_unlock = egui::Button::new(self.time_sett.relax_len_btn_stat)
+                    .fill(egui::Color32::from_rgb(3,3,3))
+                    .rounding(25.0);
+
+                // // 2. reset slider
+                let btn_reset = egui::Button::new("RESET")
+                    .fill(egui::Color32::from_rgb(200, 0, 0))
+                    .rounding(25.0);
+
+                if ui.add(btn_lock_unlock).clicked() {
+                    let enable = &mut self.time_sett.relax_len_slider_enable;
+                    if *enable {
+                        *enable = false;
+
+                        self.time_sett.study_len_btn_stat = BTN_STATUSES[1];                        
+                        self.time_sett.relax_len.dur = Duration::minutes(self.time_sett.relax_len.mins);
+                        println!(">> Debug: relax time Duration len now = {x:?}", x=self.time_sett.relax_len.dur);
+                    } else {
+                        *enable = true;
+                        self.time_sett.study_len_btn_stat = BTN_STATUSES[0];
+                    }
+                }
+
+                if ui.add(btn_reset).clicked() {
+                    self.time_sett.relax_len.mins = 0;
+                    self.time_sett.relax_len.dur = Duration::minutes(0);
                 }
             });
             
@@ -192,22 +287,36 @@ impl eframe::App for Pomodoro {
             // row 1
             ui.horizontal(|ui| {
 
-                let r1 = ui.checkbox(&mut false, egui::WidgetText::from("Play Music At Relax Start"));
+                let e = ui.checkbox(&mut false, egui::WidgetText::from("Play Music At Relax Start"));
                 // only if checkbox ticked
-                ui.add_enabled(r1.enabled(), |ui: &mut Ui| {
-                    ui.text_edit_singleline(&mut self.music_settings.file_path_relax_start)
-                });                
+                ui.add_enabled(self.music_sett.play_relax_start, |ui: &mut Ui| {
+                    let s = &mut self.music_sett.file_path_rlx;
+                    ui.text_edit_singleline(s)
+                });
 
+                if e.enabled() {
+                    self.music_sett.play_relax_start = true;
+                } else {
+                    self.music_sett.play_relax_start = false;
+                }
+                
             });
 
             // row 2
             ui.horizontal(|ui| {
 
-                let r1 = ui.checkbox(&mut false, egui::WidgetText::from("Play Music At Study Start"));
+                let e = ui.checkbox(&mut false, egui::WidgetText::from("Play Music At Study Start"));
                 // only if checkbox ticked
-                ui.add_enabled(r1.enabled(), |ui: &mut Ui| {
-                    ui.text_edit_singleline(&mut self.music_settings.file_path_study_start)
+                ui.add_enabled(self.music_sett.play_study_start, |ui: &mut Ui| {
+                    let s = &mut self.music_sett.file_path_std;
+                    ui.text_edit_singleline(s)
                 });
+
+                if e.enabled() {
+                    self.music_sett.play_study_start = true;
+                } else {
+                    self.music_sett.play_study_start = false;
+                }
 
             });
         });
