@@ -11,6 +11,7 @@ const BTN_RECHOOSE_STR : &str = "Re-Choose";
 const BTN_STATUSES : [&str; 2] = [BTN_CONFIRM_STR, BTN_RECHOOSE_STR];
 
 
+
 #[derive(serde::Deserialize, serde::Serialize)]
 #[serde(default)]
 pub struct Pomodoro {
@@ -22,6 +23,8 @@ pub struct Pomodoro {
     // #[serde(skip)]
     time_sett: TimeSettings,
     music_sett: IntercessionMusic,
+
+    app_status: AppStatus
 }
 
 
@@ -103,13 +106,62 @@ struct IntercessionMusic {
 
 
 
+
+
+#[derive(serde::Deserialize, serde::Serialize, Default)]
+struct AppStatus {
+    is_ongoing: bool,
+    study_or_relax: StudyRelaxStatus,
+    is_paused: bool, // NOT is_stopped
+}
+
+#[derive(serde::Deserialize, serde::Serialize, Default)]
+enum StudyRelaxStatus {
+    #[default]
+    Study,
+    Relax
+}
+
+
+impl AppStatus {
+    
+    fn is_running(&self) -> bool {
+        self.is_ongoing & !self.is_paused
+    }
+
+
+
+    fn run(&mut self) {
+        self.is_ongoing = true;
+        self.is_paused = false;
+    }
+
+    fn pause(&mut self) {
+        self.is_paused = true;
+    }
+
+    fn stop(&mut self) {
+        self.is_ongoing = false;
+        self.is_paused = false;
+    }
+}
+
+
+
+
+
+//============================ Impl for MAIN
+
 impl Default for Pomodoro {
     fn default() -> Self {
         Self {
             label: "My App".to_owned(),
             value: 1.1,
-            time_sett: TimeSettings::default(),
-            music_sett: IntercessionMusic::default()
+
+
+            time_sett: Default::default(),
+            music_sett: Default::default(),
+            app_status: Default::default(),
         }
     }
 }
@@ -120,6 +172,43 @@ impl Pomodoro {
             eframe::get_value(storage, eframe::APP_KEY).unwrap_or_default()
         } else {
             Pomodoro::default()
+        }
+    }
+
+
+    fn play_track(&self) {
+        match self.app_status.study_or_relax {
+            StudyRelaxStatus::Study => if self.music_sett.play_study_start {
+                // TODO
+                println!(">> Play Study");
+            },
+            StudyRelaxStatus::Relax => if self.music_sett.play_relax_start {
+                // TODO
+                println!(">> Play Relax");
+            },
+        }
+    }
+
+    pub async fn run(&mut self) {
+        self.app_status.run();
+
+        // == conversion
+        loop {
+            let std_dur = match self.app_status.study_or_relax {
+                StudyRelaxStatus::Study => std::time::Duration::from_secs(self.time_sett.study_len.dur.num_seconds() as u64),
+                StudyRelaxStatus::Relax => std::time::Duration::from_secs(self.time_sett.relax_len.dur.num_seconds() as u64),
+            };
+    
+            std::thread::sleep(std_dur);
+
+            // == play music
+            self.play_track();
+
+            // == study or relax
+            self.app_status.study_or_relax = match self.app_status.study_or_relax {
+                StudyRelaxStatus::Study => StudyRelaxStatus::Relax,
+                StudyRelaxStatus::Relax => StudyRelaxStatus::Study,
+            };
         }
     }
 }
@@ -167,27 +256,42 @@ impl eframe::App for Pomodoro {
                 self.value += 1.0;
             }
 
+
+
+
+
             ui.separator();
 
+
+
+
             // // === GITHUB Connection
-            ui.add(egui::github_link_file!(
-                "https://github.com/emilk/eframe_template/blob/master/",
-                "Source code."
-            ));
+            // ui.add(egui::github_link_file!(
+            //     "https://github.com/emilk/eframe_template/blob/master/",
+            //     "Source code."
+            // ));
 
-            ui.with_layout(egui::Layout::bottom_up(egui::Align::LEFT), |ui| {
-                powered_by_egui_and_eframe(ui);
-                egui::warn_if_debug_build(ui);
-            });
 
-        });
+            // // ===== from original template, disable for now
 
-        // ========== BOTTOM
+            // ui.with_layout(egui::Layout::bottom_up(egui::Align::LEFT), |ui| {
+                
+                
+            //     powered_by_egui_and_eframe(ui);
+            //     egui::warn_if_debug_build(ui);
+            // });
 
-        egui::TopBottomPanel::bottom("bottom_panel").show(ctx, |ui| {
             ui.heading("Time Settings");
 
             // ======== MAIN
+
+
+            // components used later
+            let btn_txt_confirm_study = egui::RichText::new(self.time_sett.study_len_btn_stat)
+                .color(egui::Color32::from_rgb(255,255,255));
+            let btn_txt_confirm_relax = egui::RichText::new(self.time_sett.relax_len_btn_stat)
+                .color(egui::Color32::from_rgb(255,255,255));
+
 
             // Study Time
             ui.horizontal(|ui| {
@@ -203,11 +307,10 @@ impl eframe::App for Pomodoro {
 
                 ui.add_enabled(self.time_sett.study_len_slider_enable, slider);
 
-                let btn_lock_unlock = egui::Button::new(self.time_sett.study_len_btn_stat)
-                    .fill(egui::Color32::from_rgb(3,3,3))
-                    .rounding(25.0);
-                let btn_reset = egui::Button::new("RESET")
-                    .fill(egui::Color32::from_rgb(200, 0, 0))
+
+
+                let btn_lock_unlock = egui::Button::new(btn_txt_confirm_study)
+                    .fill(egui::Color32::from_rgb(0,0,50))
                     .rounding(25.0);
 
                 if ui.add(btn_lock_unlock).clicked() {
@@ -225,6 +328,11 @@ impl eframe::App for Pomodoro {
 
                     }
                 }
+
+
+                let btn_reset = egui::Button::new("RESET")
+                    .fill(egui::Color32::from_rgb(200, 0, 0))
+                    .rounding(25.0);
 
                 if ui.add(btn_reset).clicked() {
                     self.time_sett.study_len.mins = 0;
@@ -251,13 +359,9 @@ impl eframe::App for Pomodoro {
 
                 // // >>> two buttons:
                 // // 1. lock / unlock slider
-                let btn_lock_unlock = egui::Button::new(self.time_sett.relax_len_btn_stat)
-                    .fill(egui::Color32::from_rgb(3,3,3))
-                    .rounding(25.0);
 
-                // // 2. reset slider
-                let btn_reset = egui::Button::new("RESET")
-                    .fill(egui::Color32::from_rgb(200, 0, 0))
+                let btn_lock_unlock = egui::Button::new(btn_txt_confirm_relax)
+                    .fill(egui::Color32::from_rgb(0,0,50))
                     .rounding(25.0);
 
                 if ui.add(btn_lock_unlock).clicked() {
@@ -265,18 +369,24 @@ impl eframe::App for Pomodoro {
                     if *enable {
                         *enable = false;
 
-                        self.time_sett.study_len_btn_stat = BTN_STATUSES[1];                        
+                        self.time_sett.relax_len_btn_stat = BTN_STATUSES[1];
                         self.time_sett.relax_len.dur = Duration::minutes(self.time_sett.relax_len.mins);
                         println!(">> Debug: relax time Duration len now = {x:?}", x=self.time_sett.relax_len.dur);
                     } else {
                         *enable = true;
-                        self.time_sett.study_len_btn_stat = BTN_STATUSES[0];
+                        self.time_sett.relax_len_btn_stat = BTN_STATUSES[0];
                     }
                 }
+
+                // // 2. reset slider
+                let btn_reset = egui::Button::new("RESET")
+                    .fill(egui::Color32::from_rgb(200, 0, 0))
+                    .rounding(25.0);
 
                 if ui.add(btn_reset).clicked() {
                     self.time_sett.relax_len.mins = 0;
                     self.time_sett.relax_len.dur = Duration::minutes(0);
+                    println!(">> Debug: relax time Duration len now = {x:?}", x=self.time_sett.relax_len.dur);
                 }
             });
             
@@ -287,37 +397,75 @@ impl eframe::App for Pomodoro {
             // row 1
             ui.horizontal(|ui| {
 
-                let e = ui.checkbox(&mut false, egui::WidgetText::from("Play Music At Relax Start"));
+                ui.checkbox(&mut self.music_sett.play_relax_start, egui::WidgetText::from("Play Music At Relax Start"));
                 // only if checkbox ticked
                 ui.add_enabled(self.music_sett.play_relax_start, |ui: &mut Ui| {
                     let s = &mut self.music_sett.file_path_rlx;
                     ui.text_edit_singleline(s)
-                });
-
-                if e.enabled() {
-                    self.music_sett.play_relax_start = true;
-                } else {
-                    self.music_sett.play_relax_start = false;
-                }
-                
+                });                
             });
 
             // row 2
             ui.horizontal(|ui| {
 
-                let e = ui.checkbox(&mut false, egui::WidgetText::from("Play Music At Study Start"));
-                // only if checkbox ticked
+                let chkbox = egui::Checkbox::new(&mut self.music_sett.play_study_start, egui::WidgetText::from("Play Music At Study Start"));
+                ui.add(chkbox);
+                
                 ui.add_enabled(self.music_sett.play_study_start, |ui: &mut Ui| {
                     let s = &mut self.music_sett.file_path_std;
                     ui.text_edit_singleline(s)
                 });
 
-                if e.enabled() {
-                    self.music_sett.play_study_start = true;
-                } else {
-                    self.music_sett.play_study_start = false;
+            });
+
+
+
+            // ===== MAIN BUTTONS
+
+            ui.with_layout(egui::Layout::left_to_right(egui::Align::LEFT), |ui| {
+                ui.spacing_mut().item_spacing = egui::vec2(10.0, 5.0);
+                
+                let btn_start = egui::Button::new(
+                    egui::RichText::new("START NOW")
+                        .size(24.0)
+                        .family(egui::FontFamily::Monospace)
+                );
+                let btn_pause = egui::Button::new(
+                    egui::RichText::new("PAUSE")
+                        .size(24.0)
+                        .family(egui::FontFamily::Monospace)
+                );
+                let btn_stop = egui::Button::new(
+                    egui::RichText::new("STOP")
+                        .size(24.0)
+                        .family(egui::FontFamily::Monospace)
+                );
+
+                let start = ui.add_enabled(!self.app_status.is_ongoing, btn_start);
+                let pause = ui.add_enabled(!self.app_status.is_paused, btn_pause);
+                let stop = ui.add_enabled(self.app_status.is_running(), btn_stop);
+
+                if start.clicked() {
+                    self.app_status.run();
+                }
+                if pause.clicked() {
+                    self.app_status.pause();
+                }
+                if stop.clicked() {
+                    self.app_status.stop();
                 }
 
+            });
+
+
+        });
+
+
+        egui::TopBottomPanel::bottom("bottom_panel")
+        .show(ctx, |ui| {
+            ui.with_layout(egui::Layout::left_to_right(egui::Align::LEFT), |ui| {
+                ui.label("Made by Lucius Men. Written in Rust & Powered by ");
+                ui.hyperlink_to("egui", "https://github.com/emilk/egui");
             });
         });
 
