@@ -3,6 +3,8 @@ use chrono::Duration;
 #[allow(unused_imports)]
 use chrono::serde::ts_seconds;
 
+use crate::countdown::{SharedState, StudyRelaxStatus, AppStatus};
+
 
 
 const BTN_CONFIRM_STR : &str = "Confirm";
@@ -108,43 +110,13 @@ struct IntercessionMusic {
 
 
 
-#[derive(serde::Deserialize, serde::Serialize, Default)]
-struct AppStatus {
-    is_ongoing: bool,
-    study_or_relax: StudyRelaxStatus,
-    is_paused: bool, // NOT is_stopped
-}
-
-#[derive(serde::Deserialize, serde::Serialize, Default)]
-enum StudyRelaxStatus {
-    #[default]
-    Study,
-    Relax
-}
-
-
-impl AppStatus {
-    
-    fn is_running(&self) -> bool {
-        self.is_ongoing & !self.is_paused
-    }
 
 
 
-    fn run(&mut self) {
-        self.is_ongoing = true;
-        self.is_paused = false;
-    }
 
-    fn pause(&mut self) {
-        self.is_paused = true;
-    }
 
-    fn stop(&mut self) {
-        self.is_ongoing = false;
-        self.is_paused = false;
-    }
-}
+
+
 
 
 
@@ -177,7 +149,7 @@ impl Pomodoro {
 
 
     fn play_track(&self) {
-        match self.app_status.study_or_relax {
+        match self.app_status.study_or_relax() {
             StudyRelaxStatus::Study => if self.music_sett.play_study_start {
                 // TODO
                 println!(">> Play Study");
@@ -189,12 +161,19 @@ impl Pomodoro {
         }
     }
 
-    pub async fn run(&mut self) {
+    // ===== corresponding to
+    // run, pause, stop
+    fn start_timer(&mut self) {
+        self.app_status.run();
+    }
+
+
+    pub fn run(&mut self) {
         self.app_status.run();
 
         // == conversion
         loop {
-            let std_dur = match self.app_status.study_or_relax {
+            let std_dur = match self.app_status.study_or_relax() {
                 StudyRelaxStatus::Study => std::time::Duration::from_secs(self.time_sett.study_len.dur.num_seconds() as u64),
                 StudyRelaxStatus::Relax => std::time::Duration::from_secs(self.time_sett.relax_len.dur.num_seconds() as u64),
             };
@@ -205,10 +184,7 @@ impl Pomodoro {
             self.play_track();
 
             // == study or relax
-            self.app_status.study_or_relax = match self.app_status.study_or_relax {
-                StudyRelaxStatus::Study => StudyRelaxStatus::Relax,
-                StudyRelaxStatus::Relax => StudyRelaxStatus::Study,
-            };
+            self.app_status.revert_study_relax();
         }
     }
 }
@@ -345,7 +321,6 @@ impl eframe::App for Pomodoro {
             ui.horizontal(|ui| {
                 ui.label("Relax Time Setting");
                 
-                
                 let slider =
                     egui::Slider::new(
                         &mut self.time_sett.relax_len.mins,
@@ -441,8 +416,8 @@ impl eframe::App for Pomodoro {
                         .family(egui::FontFamily::Monospace)
                 );
 
-                let start = ui.add_enabled(!self.app_status.is_ongoing, btn_start);
-                let pause = ui.add_enabled(!self.app_status.is_paused, btn_pause);
+                let start = ui.add_enabled(!self.app_status.is_ongoing(), btn_start);
+                let pause = ui.add_enabled(!self.app_status.is_paused(), btn_pause);
                 let stop = ui.add_enabled(self.app_status.is_running(), btn_stop);
 
                 if start.clicked() {
@@ -470,7 +445,13 @@ impl eframe::App for Pomodoro {
         });
 
     }
+
 }
+
+
+
+
+
 
 
 fn powered_by_egui_and_eframe(ui: &mut Ui) {
