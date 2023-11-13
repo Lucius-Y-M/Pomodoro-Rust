@@ -21,6 +21,7 @@ pub struct AppStatus {
     is_ongoing: bool,
     study_or_relax: StudyRelaxStatus,
     is_paused: bool, // NOT is_stopped
+
 }
 
 impl AppStatus {
@@ -69,14 +70,19 @@ impl AppStatus {
     }
 
     pub fn pause(&mut self) {
-        if let Ok(_) = self.execute_command(RuntimeCommand::Pause) {
-            self.is_paused = true;
+        match self.execute_command(RuntimeCommand::Pause) {
+            Ok(_) => { self.is_paused = true; },
+            Err(_) => {},
+            // Err(e) => { println!("{e}"); },
         }
     }
 
     pub fn resume(&mut self) {
-        if let Ok(_) = self.execute_command(RuntimeCommand::Resume) {
-            self.is_paused = false;
+        match self.execute_command(RuntimeCommand::Resume) {
+            Ok(_) => { self.is_paused = false; },
+            Err(_) => {},
+            // Err(e) => { println!("{e}"); },
+            
         }
     }
 

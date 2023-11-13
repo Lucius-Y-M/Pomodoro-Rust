@@ -9,9 +9,12 @@ use crate::countdown::{SharedState, StudyRelaxStatus, AppStatus};
 
 const BTN_CONFIRM_STR : &str = "Confirm";
 const BTN_RECHOOSE_STR : &str = "Re-Choose";
+const BTN_STATUS_CONF : [&str; 2] = [BTN_CONFIRM_STR, BTN_RECHOOSE_STR];
 
-const BTN_STATUSES : [&str; 2] = [BTN_CONFIRM_STR, BTN_RECHOOSE_STR];
 
+const BTN_PAUSE_STR : &str = "Pause";
+const BTN_CONTINUE_STR : &str = "Continue";
+const BTN_STATUS_PAUSE : [&str; 2] = [BTN_PAUSE_STR, BTN_CONTINUE_STR];
 
 
 #[derive(serde::Deserialize, serde::Serialize)]
@@ -26,7 +29,17 @@ pub struct Pomodoro {
     time_sett: TimeSettings,
     music_sett: IntercessionMusic,
 
-    app_status: AppStatus
+    app_status: AppStatus,
+
+    controls: Controls,
+}
+
+
+#[derive(serde::Serialize, serde::Deserialize)]
+struct Controls {
+
+    #[serde(skip)]
+    pause_resume_btn_txt: &'static str,
 }
 
 
@@ -75,7 +88,7 @@ impl Default for TimeSettings {
                 dur: Duration::minutes(50)
             },
             study_len_slider_enable: true,
-            study_len_btn_stat: BTN_STATUSES[0],
+            study_len_btn_stat: BTN_STATUS_CONF[0],
 
 
             relax_len: DurationWrapper {
@@ -83,7 +96,7 @@ impl Default for TimeSettings {
                 dur: Duration::minutes(10)
             },
             relax_len_slider_enable: true,
-            relax_len_btn_stat: BTN_STATUSES[0],
+            relax_len_btn_stat: BTN_STATUS_CONF[0],
 
             enable_cycles: false,
             cycle_times: 3,
@@ -134,6 +147,8 @@ impl Default for Pomodoro {
             time_sett: Default::default(),
             music_sett: Default::default(),
             app_status: Default::default(),
+
+            controls: Controls { pause_resume_btn_txt: BTN_STATUS_PAUSE[0], }
         }
     }
 }
@@ -294,13 +309,13 @@ impl eframe::App for Pomodoro {
                     if *enable {
                         *enable = false;
 
-                        self.time_sett.study_len_btn_stat = BTN_STATUSES[1];
+                        self.time_sett.study_len_btn_stat = BTN_STATUS_CONF[1];
                         
                         self.time_sett.study_len.dur = Duration::minutes(self.time_sett.study_len.mins);
                         println!(">> Debug: study time Duration len now = {x:?}", x=self.time_sett.study_len.dur);
                     } else {
                         *enable = true;
-                        self.time_sett.study_len_btn_stat = BTN_STATUSES[0];
+                        self.time_sett.study_len_btn_stat = BTN_STATUS_CONF[0];
 
                     }
                 }
@@ -344,12 +359,12 @@ impl eframe::App for Pomodoro {
                     if *enable {
                         *enable = false;
 
-                        self.time_sett.relax_len_btn_stat = BTN_STATUSES[1];
+                        self.time_sett.relax_len_btn_stat = BTN_STATUS_CONF[1];
                         self.time_sett.relax_len.dur = Duration::minutes(self.time_sett.relax_len.mins);
                         println!(">> Debug: relax time Duration len now = {x:?}", x=self.time_sett.relax_len.dur);
                     } else {
                         *enable = true;
-                        self.time_sett.relax_len_btn_stat = BTN_STATUSES[0];
+                        self.time_sett.relax_len_btn_stat = BTN_STATUS_CONF[0];
                     }
                 }
 
@@ -405,8 +420,8 @@ impl eframe::App for Pomodoro {
                         .size(24.0)
                         .family(egui::FontFamily::Monospace)
                 );
-                let btn_pause = egui::Button::new(
-                    egui::RichText::new("PAUSE")
+                let btn_pause_resum = egui::Button::new(
+                    egui::RichText::new(self.controls.pause_resume_btn_txt)
                         .size(24.0)
                         .family(egui::FontFamily::Monospace)
                 );
@@ -416,15 +431,36 @@ impl eframe::App for Pomodoro {
                         .family(egui::FontFamily::Monospace)
                 );
 
-                let start = ui.add_enabled(!self.app_status.is_ongoing(), btn_start);
-                let pause = ui.add_enabled(!self.app_status.is_paused(), btn_pause);
-                let stop = ui.add_enabled(self.app_status.is_running(), btn_stop);
+                let start = ui.add_enabled(
+                    !self.app_status.is_ongoing(),
+                    btn_start
+                );
+                let pause_res = ui.add_enabled(
+                    self.app_status.is_ongoing(),
+                    btn_pause_resum
+                );
+                let stop = ui.add_enabled(
+                    self.app_status.is_running(),
+                    btn_stop
+                );
 
                 if start.clicked() {
                     self.app_status.run();
                 }
-                if pause.clicked() {
-                    self.app_status.pause();
+                if pause_res.clicked() {
+
+                    match self.app_status.is_paused() {
+                        true => {
+                            self.app_status.resume();
+                            println!("self.app stat paused now = {}", self.app_status.is_paused());
+                            self.controls.pause_resume_btn_txt = BTN_STATUS_PAUSE[0];
+                        },
+                        false => {
+                            self.app_status.pause();
+                            println!("self.app stat paused now = {}", self.app_status.is_paused());
+                            self.controls.pause_resume_btn_txt = BTN_STATUS_PAUSE[1];
+                        },
+                    }
                 }
                 if stop.clicked() {
                     self.app_status.stop();
