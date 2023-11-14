@@ -1,6 +1,9 @@
 use std::sync::{Arc, Mutex};
 
-use crate::{StdDuration, Instant};
+use crate::{ChrDuration, Instant, ChrLocal, ChrDateTime};
+
+
+
 
 
 
@@ -109,7 +112,7 @@ impl AppStatus {
         match command {
             RuntimeCommand::Run => {
                 if state.start_time.is_none() {
-                    state.start_time = Some(Instant::now());
+                    state.start_time = Some(ChrLocal::now());
                     state.paused_time = None;
 
                     Ok(())
@@ -120,7 +123,7 @@ impl AppStatus {
             RuntimeCommand::Pause => {
                 if let Some(start_time) = state.start_time {
                     if state.paused_time.is_none() {
-                        state.paused_time = Some(Instant::now() - start_time);
+                        state.paused_time = Some( ChrLocal::now().signed_duration_since(start_time) );
                         
                         Ok(())
                     } else {
@@ -132,7 +135,7 @@ impl AppStatus {
             },
             RuntimeCommand::Resume => {
                 if let Some(paused_time) = state.paused_time {
-                    state.start_time = Some(Instant::now() - paused_time);
+                    state.start_time = Some(ChrLocal::now() - paused_time);
                     state.paused_time = None;
 
                     Ok(())
@@ -164,17 +167,20 @@ pub enum StudyRelaxStatus {
 
 #[derive(Debug, Default, Clone, Copy)]
 pub struct CountdownState {
-    duration: StdDuration,
-    start_time: Option<Instant>,
-    paused_time: Option<StdDuration>
+    duration: Option<ChrDuration>,
+    start_time: Option<ChrDateTime<ChrLocal>>,
+    paused_time: Option<ChrDuration>
 }
 
+
 impl CountdownState {
-    fn new(duration: StdDuration) -> Self {
-        CountdownState { duration, start_time: None, paused_time: None }
+    fn new(duration: ChrDuration) -> Self {
+        CountdownState { duration: Some(duration), start_time: None, paused_time: None }
     }
 
-
+    pub fn update_duration(&mut self, new_dur: ChrDuration) {
+        self.duration = Some(new_dur);
+    }
 }
 
 

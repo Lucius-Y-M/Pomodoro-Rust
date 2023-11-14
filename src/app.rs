@@ -12,9 +12,9 @@ const BTN_RECHOOSE_STR : &str = "Re-Choose";
 const BTN_STATUS_CONF : [&str; 2] = [BTN_CONFIRM_STR, BTN_RECHOOSE_STR];
 
 
-const BTN_PAUSE_STR : &str = "Pause";
-const BTN_CONTINUE_STR : &str = "Continue";
-const BTN_STATUS_PAUSE : [&str; 2] = [BTN_PAUSE_STR, BTN_CONTINUE_STR];
+const BTN_PAUSE_STR : &str = "PAUSE";
+const BTN_RESUME_STR : &str = "RESUME";
+const BTN_STATUS_PAUSE : [&str; 2] = [BTN_PAUSE_STR, BTN_RESUME_STR];
 
 
 #[derive(serde::Deserialize, serde::Serialize)]
@@ -417,17 +417,17 @@ impl eframe::App for Pomodoro {
                 
                 let btn_start = egui::Button::new(
                     egui::RichText::new("START NOW")
-                        .size(24.0)
+                        .size(18.0)
                         .family(egui::FontFamily::Monospace)
                 );
                 let btn_pause_resum = egui::Button::new(
                     egui::RichText::new(self.controls.pause_resume_btn_txt)
-                        .size(24.0)
+                        .size(18.0)
                         .family(egui::FontFamily::Monospace)
                 );
                 let btn_stop = egui::Button::new(
                     egui::RichText::new("STOP")
-                        .size(24.0)
+                        .size(18.0)
                         .family(egui::FontFamily::Monospace)
                 );
 
