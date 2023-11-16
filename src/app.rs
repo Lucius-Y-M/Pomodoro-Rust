@@ -1,20 +1,16 @@
+use std::sync::{Arc, Mutex};
+
 use eframe::egui::{self, Ui};
 use chrono::Duration;
 #[allow(unused_imports)]
 use chrono::serde::ts_seconds;
 
-use crate::countdown::{SharedState, StudyRelaxStatus, AppStatus};
+use crate::{countdown::{SharedState, StudyRelaxStatus, AppStatus, CountdownState, BTN_STATUS_PAUSE, EnOrDis, BTN_STATUS_CONF}, ChrDuration};
 
 
 
-const BTN_CONFIRM_STR : &str = "Confirm";
-const BTN_RECHOOSE_STR : &str = "Re-Choose";
-const BTN_STATUS_CONF : [&str; 2] = [BTN_CONFIRM_STR, BTN_RECHOOSE_STR];
 
 
-const BTN_PAUSE_STR : &str = "PAUSE";
-const BTN_RESUME_STR : &str = "RESUME";
-const BTN_STATUS_PAUSE : [&str; 2] = [BTN_PAUSE_STR, BTN_RESUME_STR];
 
 
 #[derive(serde::Deserialize, serde::Serialize)]
@@ -26,9 +22,10 @@ pub struct Pomodoro {
     value: f32,
 
     // #[serde(skip)]
-    time_sett: TimeSettings,
+    // time_sett: TimeSettings,
     music_sett: IntercessionMusic,
 
+    #[serde(skip)]
     app_status: AppStatus,
 
     controls: Controls,
@@ -43,68 +40,6 @@ struct Controls {
 }
 
 
-#[derive(serde::Serialize, serde::Deserialize)]
-struct TimeSettings {
-
-    // #[serde(with = "ts_seconds")]
-    #[serde(skip)]
-    study_len: DurationWrapper,
-    study_len_slider_enable: bool,
-    #[serde(skip)]
-    study_len_btn_stat: &'static str,
-
-    // #[serde(with = "ts_seconds")]
-    #[serde(skip)]
-    relax_len: DurationWrapper,
-    relax_len_slider_enable: bool,
-    #[serde(skip)]
-    relax_len_btn_stat: &'static str,
-
-    enable_cycles: bool,
-    cycle_times: i32,
-    cycle_count: i32,
-}
-
-struct DurationWrapper {
-    mins: i64,
-    dur: Duration,
-}
-
-impl Default for DurationWrapper {
-    fn default() -> Self {
-        Self {
-            mins: 0,
-            dur: Duration::minutes(0)
-        }
-    }
-}
-
-
-impl Default for TimeSettings {
-    fn default() -> Self {
-        Self {
-            study_len: DurationWrapper {
-                mins: 50,
-                dur: Duration::minutes(50)
-            },
-            study_len_slider_enable: true,
-            study_len_btn_stat: BTN_STATUS_CONF[0],
-
-
-            relax_len: DurationWrapper {
-                mins: 10,
-                dur: Duration::minutes(10)
-            },
-            relax_len_slider_enable: true,
-            relax_len_btn_stat: BTN_STATUS_CONF[0],
-
-            enable_cycles: false,
-            cycle_times: 3,
-            cycle_count: 0,
-
-        }
-    }
-}
 
 
 
@@ -144,7 +79,7 @@ impl Default for Pomodoro {
             value: 1.1,
 
 
-            time_sett: Default::default(),
+            // time_sett: Default::default(),
             music_sett: Default::default(),
             app_status: Default::default(),
 
@@ -188,12 +123,15 @@ impl Pomodoro {
 
         // == conversion
         loop {
-            let std_dur = match self.app_status.study_or_relax() {
-                StudyRelaxStatus::Study => std::time::Duration::from_secs(self.time_sett.study_len.dur.num_seconds() as u64),
-                StudyRelaxStatus::Relax => std::time::Duration::from_secs(self.time_sett.relax_len.dur.num_seconds() as u64),
-            };
+
+            todo!("Impl countdown mechan here");
+
+            // let std_dur = match self.app_status.study_or_relax() {
+            //     StudyRelaxStatus::Study => std::time::Duration::from_secs(self.time_sett.study_len.dur.num_seconds() as u64),
+            //     StudyRelaxStatus::Relax => std::time::Duration::from_secs(self.time_sett.relax_len.dur.num_seconds() as u64),
+            // };
     
-            std::thread::sleep(std_dur);
+            // std::thread::sleep(std_dur);
 
             // == play music
             self.play_track();
@@ -202,6 +140,65 @@ impl Pomodoro {
             self.app_status.revert_study_relax();
         }
     }
+
+
+
+    // // === AUX fn
+    fn en_or_disable(&mut self, should_en_or_dis: EnOrDis, which: StudyRelaxStatus, dur: Option<ChrDuration>) {
+        match which {
+            StudyRelaxStatus::Study => {
+
+
+                match should_en_or_dis {
+                    EnOrDis::Enable => {
+                        self.app_status.study_len_slider_enable = true;
+                        self.app_status.study_len_btn_stat = BTN_STATUS_CONF[0];
+
+                        if let Ok(ref mut s) = self.app_status.shared_state.try_lock() {
+                            s.update_duration(None);
+                        }
+                        println!(">> Debug: study time Duration now no longer set");
+                    },
+                    EnOrDis::Disable => {
+
+                        self.app_status.study_len_slider_enable = false;
+                        self.app_status.study_len_btn_stat = BTN_STATUS_CONF[1];
+
+                        if let Ok(ref mut s) = self.app_status.shared_state.try_lock() {
+                            s.update_duration(dur);
+                        }
+                        println!(">> Debug: study time Duration now set");
+                    },
+                }
+
+            },
+            StudyRelaxStatus::Relax => {
+                match should_en_or_dis {
+                    EnOrDis::Enable => {
+                        self.app_status.relax_len_slider_enable = true;
+                        self.app_status.relax_len_btn_stat = BTN_STATUS_CONF[0];
+
+
+                        if let Ok(ref mut s) = self.app_status.shared_state.try_lock() {
+                            s.update_duration(None);
+                        }
+                        println!(">> Debug: relax time Duration now no longer set");
+                    },
+                    EnOrDis::Disable => {
+
+                        self.app_status.relax_len_slider_enable = false;
+                        self.app_status.relax_len_btn_stat = BTN_STATUS_CONF[0];
+
+                        if let Ok(ref mut s) = self.app_status.shared_state.try_lock() {
+                            s.update_duration(dur);
+                        }
+                        println!(">> Debug: relax time Duration now set");
+                    },
+                }
+            },
+        }
+    }
+    
 }
 
 
@@ -278,9 +275,9 @@ impl eframe::App for Pomodoro {
 
 
             // components used later
-            let btn_txt_confirm_study = egui::RichText::new(self.time_sett.study_len_btn_stat)
+            let btn_txt_confirm_study = egui::RichText::new(self.app_status.study_len_btn_stat)
                 .color(egui::Color32::from_rgb(255,255,255));
-            let btn_txt_confirm_relax = egui::RichText::new(self.time_sett.relax_len_btn_stat)
+            let btn_txt_confirm_relax = egui::RichText::new(self.app_status.relax_len_btn_stat)
                 .color(egui::Color32::from_rgb(255,255,255));
 
 
@@ -288,15 +285,18 @@ impl eframe::App for Pomodoro {
             ui.horizontal(|ui| {
                 ui.label("Study Time Setting");
                 
+
+
+
                 let slider =
                     egui::Slider::new(
-                        &mut self.time_sett.study_len.mins,
+                        &mut self.app_status.study_len,
                         0..=120
                     )
                     .text("Minutes")
                     .text_color(egui::Color32::from_rgb(150, 150, 50));
 
-                ui.add_enabled(self.time_sett.study_len_slider_enable, slider);
+                ui.add_enabled(self.app_status.study_len_slider_enable, slider);
 
 
 
@@ -305,18 +305,11 @@ impl eframe::App for Pomodoro {
                     .rounding(25.0);
 
                 if ui.add(btn_lock_unlock).clicked() {
-                    let enable = &mut self.time_sett.study_len_slider_enable;
+                    let enable = &mut self.app_status.study_len_slider_enable;
                     if *enable {
-                        *enable = false;
-
-                        self.time_sett.study_len_btn_stat = BTN_STATUS_CONF[1];
-                        
-                        self.time_sett.study_len.dur = Duration::minutes(self.time_sett.study_len.mins);
-                        println!(">> Debug: study time Duration len now = {x:?}", x=self.time_sett.study_len.dur);
+                        self.en_or_disable(EnOrDis::Disable, StudyRelaxStatus::Study, Some(ChrDuration::minutes(self.app_status.study_len)));
                     } else {
-                        *enable = true;
-                        self.time_sett.study_len_btn_stat = BTN_STATUS_CONF[0];
-
+                        self.en_or_disable(EnOrDis::Enable, StudyRelaxStatus::Study, None);
                     }
                 }
 
@@ -326,8 +319,7 @@ impl eframe::App for Pomodoro {
                     .rounding(25.0);
 
                 if ui.add(btn_reset).clicked() {
-                    self.time_sett.study_len.mins = 0;
-                    self.time_sett.study_len.dur = Duration::minutes(0);
+                    self.app_status.study_len = 0;
                 }
 
             });
@@ -338,13 +330,13 @@ impl eframe::App for Pomodoro {
                 
                 let slider =
                     egui::Slider::new(
-                        &mut self.time_sett.relax_len.mins,
+                        &mut self.app_status.relax_len,
                         0..=60
                     )
                     .text("Minutes")
                     .text_color(egui::Color32::from_rgb(150, 150, 50));
 
-                ui.add_enabled(self.time_sett.relax_len_slider_enable, slider);
+                ui.add_enabled(self.app_status.relax_len_slider_enable, slider);
                 
 
                 // // >>> two buttons:
@@ -355,16 +347,14 @@ impl eframe::App for Pomodoro {
                     .rounding(25.0);
 
                 if ui.add(btn_lock_unlock).clicked() {
-                    let enable = &mut self.time_sett.relax_len_slider_enable;
+                    let enable = &mut self.app_status.relax_len_slider_enable;
                     if *enable {
                         *enable = false;
 
-                        self.time_sett.relax_len_btn_stat = BTN_STATUS_CONF[1];
-                        self.time_sett.relax_len.dur = Duration::minutes(self.time_sett.relax_len.mins);
-                        println!(">> Debug: relax time Duration len now = {x:?}", x=self.time_sett.relax_len.dur);
+                        self.app_status.relax_len_btn_stat = BTN_STATUS_CONF[1];
                     } else {
                         *enable = true;
-                        self.time_sett.relax_len_btn_stat = BTN_STATUS_CONF[0];
+                        self.app_status.relax_len_btn_stat = BTN_STATUS_CONF[0];
                     }
                 }
 
@@ -374,9 +364,7 @@ impl eframe::App for Pomodoro {
                     .rounding(25.0);
 
                 if ui.add(btn_reset).clicked() {
-                    self.time_sett.relax_len.mins = 0;
-                    self.time_sett.relax_len.dur = Duration::minutes(0);
-                    println!(">> Debug: relax time Duration len now = {x:?}", x=self.time_sett.relax_len.dur);
+                    self.app_status.relax_len = 0;
                 }
             });
             
