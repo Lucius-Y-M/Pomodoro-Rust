@@ -279,122 +279,134 @@ impl eframe::App for Pomodoro {
                 .color(egui::Color32::from_rgb(255,255,255));
             let btn_txt_confirm_relax = egui::RichText::new(self.app_status.relax_len_btn_stat)
                 .color(egui::Color32::from_rgb(255,255,255));
-
-
-            // Study Time
-            ui.horizontal(|ui| {
-                ui.label("Study Time Setting");
-                
-
-
-
-                let slider =
-                    egui::Slider::new(
-                        &mut self.app_status.study_len,
-                        0..=120
-                    )
-                    .text("Minutes")
-                    .text_color(egui::Color32::from_rgb(150, 150, 50));
-
-                ui.add_enabled(self.app_status.study_len_slider_enable, slider);
-
-
-
-                let btn_lock_unlock = egui::Button::new(btn_txt_confirm_study)
-                    .fill(egui::Color32::from_rgb(0,0,50))
-                    .rounding(25.0);
-
-                if ui.add(btn_lock_unlock).clicked() {
-                    let enable = &mut self.app_status.study_len_slider_enable;
-                    if *enable {
-                        self.en_or_disable(EnOrDis::Disable, StudyRelaxStatus::Study, Some(ChrDuration::minutes(self.app_status.study_len)));
-                    } else {
-                        self.en_or_disable(EnOrDis::Enable, StudyRelaxStatus::Study, None);
-                    }
-                }
-
-
-                let btn_reset = egui::Button::new("RESET")
-                    .fill(egui::Color32::from_rgb(200, 0, 0))
-                    .rounding(25.0);
-
-                if ui.add(btn_reset).clicked() {
-                    self.app_status.study_len = 0;
-                }
-
-            });
-
-            // Relax Time
-            ui.horizontal(|ui| {
-                ui.label("Relax Time Setting");
-                
-                let slider =
-                    egui::Slider::new(
-                        &mut self.app_status.relax_len,
-                        0..=60
-                    )
-                    .text("Minutes")
-                    .text_color(egui::Color32::from_rgb(150, 150, 50));
-
-                ui.add_enabled(self.app_status.relax_len_slider_enable, slider);
-                
-
-                // // >>> two buttons:
-                // // 1. lock / unlock slider
-
-                let btn_lock_unlock = egui::Button::new(btn_txt_confirm_relax)
-                    .fill(egui::Color32::from_rgb(0,0,50))
-                    .rounding(25.0);
-
-                if ui.add(btn_lock_unlock).clicked() {
-                    let enable = &mut self.app_status.relax_len_slider_enable;
-                    if *enable {
-                        *enable = false;
-
-                        self.app_status.relax_len_btn_stat = BTN_STATUS_CONF[1];
-                    } else {
-                        *enable = true;
-                        self.app_status.relax_len_btn_stat = BTN_STATUS_CONF[0];
-                    }
-                }
-
-                // // 2. reset slider
-                let btn_reset = egui::Button::new("RESET")
-                    .fill(egui::Color32::from_rgb(200, 0, 0))
-                    .rounding(25.0);
-
-                if ui.add(btn_reset).clicked() {
-                    self.app_status.relax_len = 0;
-                }
-            });
             
 
 
-            // ======== EXTRA
+            //// ============== TIME SETTINGS && MUSIC SETTINGS
+            //// ENTIRE SECTION DISABLED IF COUNTDOWN IS ONGOING
+            ui.add_enabled_ui(!self.app_status.is_ongoing(), |ui| {
+                // Study Time
+                ui.horizontal(|ui| {
+                    ui.label("Study Time Setting");
+                    
 
-            // row 1
-            ui.horizontal(|ui| {
 
-                ui.checkbox(&mut self.music_sett.play_relax_start, egui::WidgetText::from("Play Music At Relax Start"));
-                // only if checkbox ticked
-                ui.add_enabled(self.music_sett.play_relax_start, |ui: &mut Ui| {
-                    let s = &mut self.music_sett.file_path_rlx;
-                    ui.text_edit_singleline(s)
-                });                
-            });
 
-            // row 2
-            ui.horizontal(|ui| {
+                    let slider =
+                        egui::Slider::new(
+                            &mut self.app_status.study_len,
+                            0..=120
+                        )
+                        .text("Minutes")
+                        .text_color(egui::Color32::from_rgb(150, 150, 50));
 
-                let chkbox = egui::Checkbox::new(&mut self.music_sett.play_study_start, egui::WidgetText::from("Play Music At Study Start"));
-                ui.add(chkbox);
-                
-                ui.add_enabled(self.music_sett.play_study_start, |ui: &mut Ui| {
-                    let s = &mut self.music_sett.file_path_std;
-                    ui.text_edit_singleline(s)
+                    ui.add_enabled(self.app_status.study_len_slider_enable, slider);
+
+
+
+                    let btn_lock_unlock = egui::Button::new(btn_txt_confirm_study)
+                        .fill(egui::Color32::from_rgb(0,0,50))
+                        .rounding(25.0);
+
+                    if ui.add(btn_lock_unlock).clicked() {
+                        let enable = &mut self.app_status.study_len_slider_enable;
+                        if *enable {
+                            self.en_or_disable(EnOrDis::Disable, StudyRelaxStatus::Study, Some(ChrDuration::minutes(self.app_status.study_len)));
+                        } else {
+                            self.en_or_disable(EnOrDis::Enable, StudyRelaxStatus::Study, None);
+                        }
+                    }
+
+
+                    let btn_reset = egui::Button::new("RESET")
+                        .fill(egui::Color32::from_rgb(200, 0, 0))
+                        .rounding(25.0);
+
+                    if ui.add(btn_reset).clicked() {
+                        self.app_status.study_len = 0;
+                    }
+
                 });
 
+                // Relax Time
+                
+                ui.horizontal(|ui| {
+                    
+                    
+                    ui.label("Relax Time Setting");
+                    
+                    let slider =
+                        egui::Slider::new(
+                            &mut self.app_status.relax_len,
+                            0..=60
+                        )
+                        .text("Minutes")
+                        .text_color(egui::Color32::from_rgb(150, 150, 50));
+
+                    ui.add_enabled(self.app_status.relax_len_slider_enable, slider);
+                    
+
+                    // // >>> two buttons:
+                    // // 1. lock / unlock slider
+
+                    let btn_lock_unlock = egui::Button::new(btn_txt_confirm_relax)
+                        .fill(egui::Color32::from_rgb(0,0,50))
+                        .rounding(25.0);
+
+                    if ui.add(btn_lock_unlock).clicked() {
+                        let enable = &mut self.app_status.relax_len_slider_enable;
+                        if *enable {
+                            *enable = false;
+
+                            self.app_status.relax_len_btn_stat = BTN_STATUS_CONF[1];
+                        } else {
+                            *enable = true;
+                            self.app_status.relax_len_btn_stat = BTN_STATUS_CONF[0];
+                        }
+                    }
+
+                    // // 2. reset slider
+                    let btn_reset = egui::Button::new("RESET")
+                        .fill(egui::Color32::from_rgb(200, 0, 0))
+                        .rounding(25.0);
+
+                    if ui.add(btn_reset).clicked() {
+                        self.app_status.relax_len = 0;
+                    }
+                });
+                
+
+
+                // ======== EXTRA
+
+                // row 1
+
+                
+
+                ui.horizontal(|ui| {
+
+                    ui.checkbox(&mut self.music_sett.play_relax_start, egui::WidgetText::from("Play Music At Relax Start"));
+                    // only if checkbox ticked
+                    ui.add_enabled(self.music_sett.play_relax_start, |ui: &mut Ui| {
+                        let s = &mut self.music_sett.file_path_rlx;
+                        ui.text_edit_singleline(s)
+                    });                
+                });
+
+                // row 2
+                ui.horizontal(|ui| {
+
+                    let chkbox = egui::Checkbox::new(&mut self.music_sett.play_study_start, egui::WidgetText::from("Play Music At Study Start"));
+                    ui.add(chkbox);
+                    
+                    ui.add_enabled(self.music_sett.play_study_start, |ui: &mut Ui| {
+                        let s = &mut self.music_sett.file_path_std;
+                        ui.text_edit_singleline(s)
+                    });
+
+                });
             });
+
 
 
 
