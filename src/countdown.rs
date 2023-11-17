@@ -28,110 +28,6 @@ pub const BTN_STATUS_PAUSE : [&str; 2] = [BTN_PAUSE_STR, BTN_RESUME_STR];
 
 
 
-// #[derive(serde::Serialize, serde::Deserialize)]
-// pub struct TimeSettings {
-
-
-
-
-
-//     //// #[serde(with = "ts_seconds")]
-
-//     pub study_len_slider_enable: bool,
-//     pub study_len_btn_stat: &'static str,
-//     #[serde(skip)]
-//     pub study_countdown: SharedState,
-
-//     // #[serde(skip)]
-//     // study_len: DurationWrapper,
-//     // study_len_slider_enable: bool,
-//     // #[serde(skip)]
-//     // study_len_btn_stat: &'static str,
-
-
-
-
-//     //// #[serde(with = "ts_seconds")]
-
-//     pub relax_len_slider_enable: bool,
-//     pub relax_len_btn_stat: &'static str,
-//     #[serde(skip)]
-//     pub relax_countdown: SharedState,
-
-//     // #[serde(skip)]
-//     // relax_len: DurationWrapper,
-//     // relax_len_slider_enable: bool,
-//     // #[serde(skip)]
-//     // relax_len_btn_stat: &'static str,
-
-//     pub enable_cycles: bool,
-//     pub cycle_times: i32,
-//     pub cycle_count: i32,
-// }
-
-
-// struct DurationWrapper {
-//     mins: i64,
-//     dur: Duration,
-// }
-
-// impl Default for DurationWrapper {
-//     fn default() -> Self {
-//         Self {
-//             mins: 0,
-//             dur: Duration::minutes(0)
-//         }
-//     }
-// }
-
-
-
-// impl Default for TimeSettings {
-//     fn default() -> Self {
-//         Self {
-//             // study_len: DurationWrapper {
-//             //     mins: 50,
-//             //     dur: Duration::minutes(50)
-//             // },
-//             study_len_slider_enable: true,
-//             study_len_btn_stat: BTN_STATUS_CONF[0],
-//             study_countdown: Arc::new(Mutex::new(CountdownState::default())),
-
-
-
-//             // relax_len: DurationWrapper {
-//             //     mins: 10,
-//             //     dur: Duration::minutes(10)
-//             // },
-//             relax_len_slider_enable: true,
-//             relax_len_btn_stat: BTN_STATUS_CONF[0],
-//             relax_countdown: Arc::new(Mutex::new(CountdownState::default())),
-
-
-
-//             enable_cycles: false,
-//             cycle_times: 3,
-//             cycle_count: 0,
-
-//         }
-//     }
-// }
-
-
-
-
-
-
-
-
-
-
-
-
-
-pub type SharedState = Arc<Mutex<CountdownState>>;
-
-
 
 pub enum RuntimeCommand {
     Run,
@@ -161,6 +57,13 @@ pub struct AppStatus {
 
 
 }
+
+pub type SharedState = Arc<Mutex<CountdownState>>;
+
+
+
+
+
 
 impl Default for AppStatus {
     fn default() -> Self {
@@ -220,9 +123,12 @@ impl AppStatus {
 
     pub fn run(&mut self) {
 
-        if let Ok(_) = self.execute_command(RuntimeCommand::Run) {
-            self.is_ongoing = true;
-            self.is_paused = false;
+        match self.execute_command(RuntimeCommand::Run) {
+            Ok(_) => {
+                self.is_ongoing = true;
+                self.is_paused = false;
+            },
+            Err(_) => {},
         }
 
 
@@ -249,9 +155,12 @@ impl AppStatus {
 
     pub fn stop(&mut self) {
 
-        if let Ok(_) = self.execute_command(RuntimeCommand::Stop) {
-            self.is_ongoing = false;
-            self.is_paused = false;    
+        match self.execute_command(RuntimeCommand::Stop) {
+            Ok(_) => {
+                self.is_ongoing = false;
+                self.is_paused = false;
+            },
+            Err(_) => todo!(),
         }
     }
 
@@ -325,13 +234,15 @@ pub enum StudyRelaxStatus {
 pub struct CountdownState {
     duration: Option<ChrDuration>,
     start_time: Option<ChrDateTime<ChrLocal>>,
-    paused_time: Option<ChrDuration>
+    paused_time: Option<ChrDuration>,
+    remaining_time: Option<ChrDateTime<ChrLocal>>
+
 }
 
 
 impl CountdownState {
     fn new(duration: ChrDuration) -> Self {
-        CountdownState { duration: Some(duration), start_time: None, paused_time: None }
+        CountdownState { duration: Some(duration), start_time: None, paused_time: None, remaining_time: None }
     }
 
     pub fn update_duration(&mut self, new_dur: Option<ChrDuration>) {

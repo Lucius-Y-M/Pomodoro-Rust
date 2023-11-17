@@ -112,13 +112,8 @@ impl Pomodoro {
     }
 
     // ===== corresponding to
-    // run, pause, stop
-    fn start_timer(&mut self) {
-        self.app_status.run();
-    }
 
-
-    pub fn run(&mut self) {
+    fn run(&mut self) {
         self.app_status.run();
 
         // == conversion
@@ -285,6 +280,8 @@ impl eframe::App for Pomodoro {
             //// ============== TIME SETTINGS && MUSIC SETTINGS
             //// ENTIRE SECTION DISABLED IF COUNTDOWN IS ONGOING
             ui.add_enabled_ui(!self.app_status.is_ongoing(), |ui| {
+
+
                 // Study Time
                 ui.horizontal(|ui| {
                     ui.label("Study Time Setting");
