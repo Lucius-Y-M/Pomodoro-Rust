@@ -1,3 +1,4 @@
+pub use std::sync::{Arc, Mutex};
 
 
 #[allow(dead_code)]
@@ -10,6 +11,10 @@ pub type ChrLocal = chrono::Local;
 pub type ChrDateTime<T> = chrono::DateTime<T>;
 
 
+pub type ArMut<T> = Arc<Mutex<T>>;
+
+
 mod app;
 mod countdown;
+
 pub use app::Pomodoro;
