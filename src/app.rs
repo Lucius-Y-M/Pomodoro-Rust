@@ -150,7 +150,7 @@ impl Pomodoro {
                         self.app_status.study_len_btn_stat = BTN_STATUS_CONF[0];
 
                         if let Ok(ref mut s) = self.app_status.shared_state.try_lock() {
-                            s.update_duration(None);
+                            s.update_remaining(None);
                         }
                         println!(">> Debug: study time Duration now no longer set");
                     },
@@ -160,7 +160,7 @@ impl Pomodoro {
                         self.app_status.study_len_btn_stat = BTN_STATUS_CONF[1];
 
                         if let Ok(ref mut s) = self.app_status.shared_state.try_lock() {
-                            s.update_duration(dur);
+                            s.update_remaining(dur);
                         }
                         println!(">> Debug: study time Duration now set");
                     },
@@ -175,7 +175,7 @@ impl Pomodoro {
 
 
                         if let Ok(ref mut s) = self.app_status.shared_state.try_lock() {
-                            s.update_duration(None);
+                            s.update_remaining(None);
                         }
                         println!(">> Debug: relax time Duration now no longer set");
                     },
@@ -185,7 +185,7 @@ impl Pomodoro {
                         self.app_status.relax_len_btn_stat = BTN_STATUS_CONF[0];
 
                         if let Ok(ref mut s) = self.app_status.shared_state.try_lock() {
-                            s.update_duration(dur);
+                            s.update_remaining(dur);
                         }
                         println!(">> Debug: relax time Duration now set");
                     },

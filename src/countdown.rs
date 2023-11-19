@@ -138,7 +138,7 @@ impl AppStatus {
                         let t_dur = s.duration.as_ref().unwrap();
                         let t_start_armut = s.start_time.clone().lock().unwrap().unwrap();
 
-                        s.remaining_time = Some(t_start_armut.checked_sub_signed(*t_dur).unwrap());
+                        s.update_remaining(Some(t_start_armut.signed_duration_since(*t_dur)) );
 
 
                         // 1 sec
@@ -245,20 +245,20 @@ impl AppStatus {
 
     fn execute_command(&mut self, command: RuntimeCommand) -> Result<(), &'static str> {
         
-        let mut state = match self.shared_state.try_lock() {
+        let mut curr_state = match self.shared_state.try_lock() {
             Ok(state) => state,
             Err(_) => return Err("!! Failed to lock state"),
         };
     
         match command {
             RuntimeCommand::Run => {
-                if let Ok(mut s_t_mg) = state.start_time.try_lock() {
-                    *s_t_mg = Some(ChrLocal::now());
+                if let Ok(mut st_mutgrd) = curr_state.start_time.try_lock() {
+                    *st_mutgrd = Some(ChrLocal::now());
                                        
 
                     Ok(())
 
-                    //// TODO: 可能還有問題
+                    //// TODO: 開始倒計時
                     // todo!()                
                 } else {
                     Err(">> Countdown already running.")
@@ -266,62 +266,47 @@ impl AppStatus {
             },
             RuntimeCommand::Pause => {
 
-                if let Ok(start_time) = state.start_time.try_lock() {
+                if let Ok(mut st_mutgrd) = curr_state.start_time.try_lock() {
 
-                    if start_time.is_some() {
-                        state.paused_time = Some( ChrLocal::now().signed_duration_since(start_time.unwrap()) );
 
-                        Ok(())
-
+                    let now = ChrLocal::now();
+                    let old = if let Some(time) = *st_mutgrd {
+                        time
                     } else {
-                        Err("!! Failed to acquire start time mutex for Pause Command!")
-                    }
+                        return Err("!! When running Pause Command: Old start time not found!");
+                    };
+                    //// update "start time" to curr
+                    *st_mutgrd = Some( now );
 
-                    // match *start_time {
-                    //     Some(start_time) => {
-                            
-                            
-                    //     },
-                    //     None => { Err("!! Failed to acquire start time mutex for Pause Command!") },
-                    // }
+                    //// reduce "duration" to original start - new "start time"
+                    curr_state.remaining_time = Some ( now.signed_duration_since(old) );
+
+                    Ok(())
+
+
                 } else {
                     Err(">> Countdown not running.")
                 }
             },
             RuntimeCommand::Resume => {
 
-                if let Ok(start_time) = state.start_time.try_lock() {
+                if let Ok(mut st_mutgrd) = curr_state.start_time.try_lock() {
                     
-                    match *start_time {
-                        Some(mut start_time) => {
-                            
-                            start_time = ChrLocal::now() - state.paused_time.expect("!!>> Unwrapped Paused Time When None!");
-                            state.paused_time = None;
+                    // TODO: 開始倒計時
 
-                            Ok(())
-
-                        },
-                        None => { Err("!! Failed to acquire start time mutex for Resume Command!") },
-                    }
+                    Ok(())
                 } else {
                     Err(">> Countdown not running.")
                 }
 
-                // if let Some(paused_time) = state.paused_time {
-                //     state.start_time = Some(ChrLocal::now() - paused_time);
-                //     state.paused_time = None;
-
-                //     Ok(())
-                // } else {
-                //     Err(">> Countdown is not running.")
-                // }
-
             },
             RuntimeCommand::Stop => {
 
-                if let Ok(mut s_t_mg) = state.start_time.try_lock() {
-                    *s_t_mg = None;
-                    state.paused_time = None;
+
+                if let Ok(mut st_mutg) = curr_state.start_time.try_lock() {
+                    *st_mutg = None;
+
+                    curr_state.remaining_time = None;
                     
                     Ok(())
 
@@ -348,10 +333,8 @@ pub enum StudyRelaxStatus {
 
 #[derive(Debug, Default, Clone)]
 pub struct CountdownState {
-    duration: Option<ChrDuration>,
     start_time: ArMut<Option<ChrDateTime<ChrLocal>>>,
-    paused_time: Option<ChrDuration>,
-    remaining_time: Option<ChrDateTime<ChrLocal>>
+    remaining_time: Option<ChrDuration>
 
 }
 
@@ -365,14 +348,12 @@ pub struct CountdownState {
 impl CountdownState {
     fn new(duration: ChrDuration) -> Self {
         CountdownState {
-            duration: Some(duration),
             start_time: Arc::new(Mutex::new(None)),
-            paused_time: None,
             remaining_time: None
         }
     }
 
-    pub fn update_duration(&mut self, new_dur: Option<ChrDuration>) {
-        self.duration = new_dur;
+    pub fn update_remaining(&mut self, new_dur: Option<ChrDuration>) {
+        self.remaining_time = new_dur;
     }
 }
