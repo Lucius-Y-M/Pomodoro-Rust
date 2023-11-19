@@ -267,17 +267,23 @@ impl AppStatus {
             RuntimeCommand::Pause => {
 
                 if let Ok(start_time) = state.start_time.try_lock() {
-                    
-                    match *start_time {
-                        Some(start_time) => {
-                            
-                            state.paused_time = Some( ChrLocal::now().signed_duration_since(start_time) );
 
-                            Ok(())
-                            
-                        },
-                        None => { Err("!! Failed to acquire start time mutex for Pause Command!") },
+                    if start_time.is_some() {
+                        state.paused_time = Some( ChrLocal::now().signed_duration_since(start_time.unwrap()) );
+
+                        Ok(())
+
+                    } else {
+                        Err("!! Failed to acquire start time mutex for Pause Command!")
                     }
+
+                    // match *start_time {
+                    //     Some(start_time) => {
+                            
+                            
+                    //     },
+                    //     None => { Err("!! Failed to acquire start time mutex for Pause Command!") },
+                    // }
                 } else {
                     Err(">> Countdown not running.")
                 }
