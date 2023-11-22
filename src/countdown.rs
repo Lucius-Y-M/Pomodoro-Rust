@@ -133,13 +133,14 @@ impl AppStatus {
 
 
                         //// TODO: perhaps not assert
-                        assert!(s.duration.is_some() && s.start_time.clone().lock().unwrap().is_some(), "!! Assertion failed: No duration or start time set");
+                        assert!(
+                            s.remaining_time.is_some()
+                            && s.start_time.as_ref().lock().unwrap().is_some(),
+                            "!! Assertion failed: Failed to read remaining and/or starting time, OR they are not set"
+                        );
 
-                        let t_dur = s.duration.as_ref().unwrap();
+                        let t_dur = s.remaining_time.as_ref().unwrap();
                         let t_start_armut = s.start_time.clone().lock().unwrap().unwrap();
-
-                        s.update_remaining(Some(t_start_armut.signed_duration_since(*t_dur)) );
-
 
                         // 1 sec
 
@@ -266,7 +267,7 @@ impl AppStatus {
             },
             RuntimeCommand::Pause => {
 
-                if let Ok(mut st_mutgrd) = curr_state.start_time.try_lock() {
+                if let Ok(mut st_mutgrd) = curr_state.start_time.clone().try_lock() {
 
 
                     let now = ChrLocal::now();
@@ -302,8 +303,7 @@ impl AppStatus {
             },
             RuntimeCommand::Stop => {
 
-
-                if let Ok(mut st_mutg) = curr_state.start_time.try_lock() {
+                if let Ok(mut st_mutg) = curr_state.start_time.clone().try_lock() {
                     *st_mutg = None;
 
                     curr_state.remaining_time = None;
