@@ -139,20 +139,19 @@ impl AppStatus {
                             "!! Assertion failed: Failed to read remaining and/or starting time, OR they are not set"
                         );
 
-                        let t_dur = s.remaining_time.as_ref().unwrap();
+                        let t_dur = s.remaining_time.clone().unwrap();
                         let t_start_armut = s.start_time.clone().lock().unwrap().unwrap();
 
                         // 1 sec
 
-                        todo!("Finish Countdown Thread part")
-                        // let countdown_thread = std::thread::spawn(move || {
-                        //     for i in 1..t_dur.num_seconds() {
+                        // todo!("Finish Countdown Thread part")
+                        let countdown_thread = std::thread::spawn(move || {
+                            for i in 1..t_dur.num_seconds() {
 
+                                todo!("FINISH COUNTDOWN");
                                 
-                        //     }
-                        // });
-
-
+                            }
+                        });
                     },
                     Err(_) => {
                         println!("!! Run: Failed to lock.");
