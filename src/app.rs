@@ -143,7 +143,6 @@ impl Pomodoro {
         match which {
             StudyRelaxStatus::Study => {
 
-
                 match should_en_or_dis {
                     EnOrDis::Enable => {
                         self.app_status.study_len_slider_enable = true;
@@ -165,7 +164,6 @@ impl Pomodoro {
                         println!(">> Debug: study time Duration now set");
                     },
                 }
-
             },
             StudyRelaxStatus::Relax => {
                 match should_en_or_dis {
@@ -230,23 +228,19 @@ impl eframe::App for Pomodoro {
             ui.horizontal(|ui| {
                 ui.label("Set your profile name here:");
                 ui.text_edit_singleline(&mut self.label);
+                
+                let b1 = egui::Button::new("Save");
+                let b2 = egui::Button::new("Load");
+
+                if ui.add(b1).clicked() {
+
+                }
+                if ui.add(b2).clicked() {
+
+                }
             });
 
-
-            // # notice how self fields are called
-            ui.add(egui::Slider::new(&mut self.value, 0.0..=10.0).text("value"));
-            if ui.button("Increment").clicked() {
-                self.value += 1.0;
-            }
-
-
-
-
-
             ui.separator();
-
-
-
 
             // // === GITHUB Connection
             // ui.add(egui::github_link_file!(
@@ -286,9 +280,6 @@ impl eframe::App for Pomodoro {
                 ui.horizontal(|ui| {
                     ui.label("Study Time Setting");
                     
-
-
-
                     let slider =
                         egui::Slider::new(
                             &mut self.app_status.study_len,
@@ -326,7 +317,6 @@ impl eframe::App for Pomodoro {
                 });
 
                 // Relax Time
-                
                 ui.horizontal(|ui| {
                     
                     
@@ -409,7 +399,7 @@ impl eframe::App for Pomodoro {
 
             // ===== MAIN BUTTONS
 
-            ui.with_layout(egui::Layout::left_to_right(egui::Align::LEFT), |ui| {
+            ui.with_layout(egui::Layout::left_to_right(egui::Align::Center), |ui| {
                 ui.spacing_mut().item_spacing = egui::vec2(10.0, 5.0);
                 
                 let btn_start = egui::Button::new(

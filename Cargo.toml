@@ -7,7 +7,8 @@ edition = "2021"
 
 [dependencies]
 chrono = { version = "0.4.31", features = ["serde"] }
-eframe = {version = "0.23.0", features = [
+eframe = {version = "0.24.1", features = [
     "persistence"
 ]}
+paste = "1.0.14"
 serde = {version = "1.0.192", features = ["derive"]}

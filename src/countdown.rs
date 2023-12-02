@@ -3,7 +3,7 @@
 ////// ====================== MOVED from APP.rs
 
 
-use std::sync::{Arc, Mutex};
+use std::{sync::{Arc, Mutex}, time::Duration};
 
 use crate::{ChrLocal, ChrDuration, ChrDateTime, ArMut};
 
@@ -26,6 +26,9 @@ pub const BTN_STATUS_CONF : [&str; 2] = [BTN_CONFIRM_STR, BTN_RECHOOSE_STR];
 pub const BTN_PAUSE_STR : &str = "PAUSE";
 pub const BTN_RESUME_STR : &str = "RESUME";
 pub const BTN_STATUS_PAUSE : [&str; 2] = [BTN_PAUSE_STR, BTN_RESUME_STR];
+
+
+
 
 
 
@@ -56,6 +59,15 @@ pub struct AppStatus {
     pub relax_len_slider_enable: bool,
     pub relax_len_btn_stat: &'static str,
 
+    #[serde(skip)]
+    pub timer_vals: Arc<Mutex<TimerVals>>,
+}
+
+#[derive(Debug, Default)]
+pub struct TimerVals {
+    hr: u8,
+    min: u8,
+    sec: u8,
 }
 
 pub type SharedState = ArMut<CountdownState>;
@@ -81,6 +93,8 @@ impl Default for AppStatus {
             study_len_slider_enable: true,
             relax_len: 0i64,
             relax_len_slider_enable: true,
+
+            timer_vals: Arc::new(Mutex::new(TimerVals::default())),
         }
     }
 }
@@ -146,12 +160,17 @@ impl AppStatus {
 
                         // todo!("Finish Countdown Thread part")
                         let countdown_thread = std::thread::spawn(move || {
-                            for i in 1..t_dur.num_seconds() {
-
-                                todo!("FINISH COUNTDOWN");
+                            for _ in 1..t_dur.num_seconds() {
+                                // every one second, alter the text
                                 
+                                self.timer_vals.get_mut().expect("!! Failed to get Arc Mut timer_vals").sec;
+
+                                std::thread::sleep(Duration::from_secs(1));
+                                // todo!("FINISH COUNTDOWN");
                             }
                         });
+
+                        countdown_thread.join().expect("!! Thread error not expected");
                     },
                     Err(_) => {
                         println!("!! Run: Failed to lock.");
