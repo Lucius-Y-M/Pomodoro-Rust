@@ -70,6 +70,20 @@ pub struct TimerVals {
     sec: u8,
 }
 
+impl TimerVals {
+    pub fn get_hr(&self) -> u8 {
+        self.hr
+    }
+    pub fn get_min(&self) -> u8 {
+        self.min
+    }
+    pub fn get_sec(&self) -> u8 {
+        self.sec
+    }
+}
+
+
+
 pub type SharedState = ArMut<CountdownState>;
 
 

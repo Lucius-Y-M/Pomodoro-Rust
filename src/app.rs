@@ -28,6 +28,7 @@ pub struct Pomodoro {
     #[serde(skip)]
     app_status: AppStatus,
 
+
     controls: Controls,
 }
 
@@ -208,7 +209,7 @@ impl eframe::App for Pomodoro {
 
                 ui.menu_button("file", |ui| {
                     if ui.button("Quit").clicked() {
-                        frame.close();
+                        ctx.send_viewport_cmd(egui::ViewportCommand::Close);
                     }
                 });
                 ui.add_space(16.0);
@@ -394,6 +395,21 @@ impl eframe::App for Pomodoro {
                 });
             });
 
+
+            // ===== HUUUUUUUUGE COUNTDOWN TIMER
+
+
+            ui.with_layout(egui::Layout::centered_and_justified(egui::Direction::LeftToRight), |ui| {
+
+                let a = self.app_status.timer_vals.try_lock().unwrap();
+
+                ui.label(a.get_hr().to_string());
+                ui.label(":");
+                ui.label(a.get_min().to_string());
+                ui.label(":");
+                ui.label(a.get_sec().to_string());
+                
+            });
 
 
 
